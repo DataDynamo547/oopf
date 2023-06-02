@@ -1,1 +1,1 @@
-# oopf
+Generic single-database configuration.
