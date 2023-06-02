@@ -18,47 +18,37 @@ from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
-from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+import sys
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Any, Dict
 
-from transformers.activations import ACT2FN
-from transformers.modeling_outputs import (
-    BaseModelOutputWithPast,
-    CausalLMOutputWithPast,
-    QuestionAnsweringModelOutput,
-    SequenceClassifierOutputWithPast,
-)
-from transformers.modeling_utils import PreTrainedModel
-from transformers.utils import (
-    add_code_sample_docstrings,
-    add_start_docstrings,
-    add_start_docstrings_to_model_forward,
-    logging,
-    replace_return_docstrings,
-)
-from transformers.models.opt.configuration_opt import OPTConfig
+sys.path.append(Path(__file__).parent.parent)
+
+from llama_hub.file.base import SimpleDirectoryReader
 
 
-logger = logging.get_logger(__name__)
+def test_recursive() -> None:
+    """Test simple directory reader in recursive mode."""
+    # test recursive
+    with TemporaryDirectory() as tmp_dir:
+        with open(f"{tmp_dir}/test1.txt", "w") as f:
+            f.write("test1")
+        with TemporaryDirectory(dir=tmp_dir) as tmp_sub_dir:
+            with open(f"{tmp_sub_dir}/test2.txt", "w") as f:
+                f.write("test2")
+            with TemporaryDirectory(dir=tmp_sub_dir) as tmp_sub_sub_dir:
+                with open(f"{tmp_sub_sub_dir}/test3.txt", "w") as f:
+                    f.write("test3")
+                with open(f"{tmp_sub_sub_dir}/test4.txt", "w") as f:
+                    f.write("test4")
 
-_CHECKPOINT_FOR_DOC = "facebook/opt-350m"
-_CONFIG_FOR_DOC = "OPTConfig"
-
-# Base model docstring
-_EXPECTED_OUTPUT_SHAPE = [1, 8, 1024]
-
-# SequenceClassification docstring
-_CHECKPOINT_FOR_SEQUENCE_CLASSIFICATION = "ArthurZ/opt-350m-dummy-sc"
-_SEQ_CLASS_EXPECTED_LOSS = 1.71
-_SEQ_CLASS_EXPECTED_OUTPUT = "'LABEL_0'"
-
-OPT_PRETRAINED_MODEL_ARCHIVE_LIST = [
-    "facebook/opt-125m",
-    "facebook/opt-350m",
-    "facebook/opt-1.3b",
-    "facebook/opt-2.7b",
-    "facebook/opt-6.7b",
-    "facebook/opt-13b",
-    "facebook/opt-30b",
-    # See all OPT models at https://huggingface.co/models?filter=opt
-]
+                    reader = SimpleDirectoryReader(tmp_dir, recursive=True)
+                    input_file_names = [f.name for f in reader.input_files]
+                    assert len(reader.input_files) == 4
+                    assert set(input_file_names) == {
+                        "test1.txt",
+                        "test2.txt",
+                        "test3.txt",
+                        "test4.txt",
+                    }
